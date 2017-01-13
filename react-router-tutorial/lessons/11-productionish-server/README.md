@@ -7,7 +7,6 @@ section.
 
 Webpack dev server is not a production server. Let's make a production
 server and a little environment-aware script to boot up the right server
-depending on the environment.
 
 Let's install a couple modules:
 
