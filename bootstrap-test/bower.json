@@ -1,0 +1,21 @@
+{
+  "name": "bootstrap-test",
+  "homepage": "https://github.com/zerotung/practices-and-notes/bootstrap-test",
+  "authors": [
+    "Zero Tung <zero_tung@163.com>"
+  ],
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^3.3.7"
+  }
+}

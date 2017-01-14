@@ -1,0 +1,13 @@
+body {
+  padding: 50px 70px;
+}
+.dropdown {
+	float: left;
+}
+.img-thumbnail:hover {
+	transform: scale(1.5);
+}
+[class *= col-]{
+  background-color: #eee;
+  border: 1px solid #ccc;
+}
