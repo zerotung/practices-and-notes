@@ -162,4 +162,174 @@ HTTP报文的主体用于传输请求或响应的实体主体。通常，报文�
 
 ## 发送多种数据的多部分对象集合
 
-发送邮件时，我们可以在邮件里写入文字并添加多份附件。这是因为采用了MIME(Multipurpose Internet Mail Extensions，多用途因特网邮件扩展)机制。
+发送邮件时，我们可以在邮件里写入文字并添加多份附件。这是因为采用了MIME(Multipurpose Internet Mail Extensions，多用途因特网邮件扩展)机制，它允许邮件处理文本、图片、视频等多个不同类型的数据。例如，图片等二进制数据以ASCII码字符串编码的方式指明，就是利用MIME来描述标记数据类型。而在MIME扩展中会使用一种称为多部分对象集合(Multipart)的方法，来容纳多份不同类型的数据。
+
+相应地，HTTP协议中也采纳了多部分对象集合，发送的一份报文主体内可含有多类型实体。通常是在图片或文本文件等上传时使用。
+
+多部分对象集合包含的对象如下。
+
+- multipart/form-data
+
+  在Web表单文件上传时使用。
+
+  ```http
+  Content-Type: multipart/form-data; boundary=AaB03x
+
+  --AaB03x
+  Content-Disposition: form-data; name="field1"
+
+  Joe Blow
+  --AaB03x
+  Content-Disposition: form-data; name="pics"; filename="file1.txt"
+  Content-Type: text/plain
+
+  ...(file1.txt's data)...
+  --AaB03x--
+  ```
+
+- multipart/byteranges
+
+  状态码206(Partial Content，部分内容)响应报文包含了多个范围的内容时使用。
+
+  ```http
+  HTTP/1.1 206 Partial Content
+  Date: Fri, 13 Jul 2012 02:45:26 GMT
+  Last-Modified: Fri, 31 Aug 2007 02:02:20 GMT
+  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+
+  --THIS_STRING_SEPARATES
+  Content-Type: application/pdf
+  Content-Range: bytes 500-999/8000
+
+  ...(范围指定的数据)...
+  --THIS_STRING_SEPARATES
+  Content-Type: application/pdf
+  Content-Range: bytes 7000-7999/8000
+
+  ...(范围指定的数据)...
+  --THIS_STRING_SEPARATES--
+  ```
+
+## 获取部分内容的范围请求
+
+指定范围发送的请求叫做范围请求(Range Request)。执行范围请求时，会用到首部字段Range来指定资源的byte范围。
+
+- 5001~10000字节：`Range: bytes=5001-10000`
+- 从5001字节之后全部的：`Range: bytes=5001-`
+- 从一开始到3000字节和5000~7000字节的多重范围：`Range: bytes=-3000, 5000-7000`
+
+针对范围请求，响应会返回状态码为`206 Partial Content`的响应报文。另外，对于多重范围的范围请求，响应会在首部字段`Content-Type`标明`multipart/byteranges`后返回响应报文。如果服务器无法响应范围请求，则返回`200 OK`和完整的实体内容。
+
+## 内容协商返回最合适的内容
+
+同一个Web网站可能存在多份相同内容的页面。比如英文版和中文版的Web页面，内容相同，但使用的语言不同。当浏览器的默认语言为英文或中文，访问相同URI的Web页面时，则会显示对应中文版或英文版的Web页面。这样的机制成为内容协商(Content Negotiation)。
+
+内容协商会以响应资源的语言、字符集、编码方式等作为判断的基准。内容协商技术有以下3种类型：
+
+- 服务器驱动协商(Server-driven Negotiation)
+
+  以请求的首部字段为参考，在服务器端自动处理。但对于用户来说，并不一定能筛选出最优内容。
+
+- 客户端驱动协商(Agent-driven Negotiation)
+
+  用户从浏览器显示的可选项列表中手动选择，还可以利用JavaScript脚本在Web页面上自动进行上述选择。比如按OS的类型或浏览器类型，自动切换成PC版页面或手机版页面。
+
+- 透明协商(Transparent Negotiation)
+
+  是两者的结合体，由服务器端和客户端各自进行内容协商。
+
+# 返回结果的HTTP状态码
+
+## 状态码告知从服务器端返回的请求结果
+
+|      | 类别                     | 原因短语          |
+| ---- | ---------------------- | ------------- |
+| 1XX  | Informational(信息性状态码)  | 接受的请求正在处理     |
+| 2XX  | Success(成功状态码)         | 请求正常处理完毕      |
+| 3XX  | Redirection(重定向状态码)    | 需要进行附加操作以完成请求 |
+| 4XX  | Client Error(客户端错误状态码) | 服务器无法处理请求     |
+| 5XX  | Server Error(服务器错误状态码) | 服务器处理请求出错     |
+
+## 2XX Success
+
+### 200 OK
+
+表明从客户端发来的请求在服务器端被正常处理了。在响应报文内，随状态码一起返回的信息会因方法不同发生改变。
+
+### 204 No Content
+
+代表服务器接收的请求已成功处理，但在返回的响应报文中不含实体的主体部分。比如，当从浏览器发出请求处理后，返回204响应，那么浏览器显示的页面不发生变化。
+
+一般在只需要从客户端往服务器发送信息，而对客户端不需要发送新信息内容的情况下使用。
+
+### 206 Partial Content
+
+ 表示客户端进行了范围请求，而服务器成功执行了这部分的GET请求。响应报文中包含由Content-Range指定范围的实体内容。
+
+## 3XX Redirection
+
+表明浏览器需要执行某些特殊的处理以正确处理请求。
+
+### 301 Moved Permanently
+
+永久性重定向。表示请求的资源已被分配了新的URI，以后应使用资源现在所指的URI。
+
+当指定资源路径的最后忘记添加斜杠，就会产生301状态码：`http://example.com/sample`
+
+### 302 Found
+
+临时性重定向。表示请求的资源已被分配了新的URI，希望用户（本次）能使用新的URI访问。与301类似，但是302表示资源不是永久移动，是临时的。换句话说，已移动的资源对应的URI将来还可能发生变化。不会去更新书签。
+
+### 303 See Other
+
+表示由于请求对应的资源存在另一个URI，应使用GET方法定向获取请求的资源。与302类似，但303明确表示客户端应当采用GET方法获取资源。
+
+> 当301、302、303响应状态码返回时，几乎所有的浏览器都会把POST改成GET，并删除请求报文内的主体，之后请求会自动再次发送。
+>
+> 301、302标准是禁止将POST方法改成GET方法的，但实际使用时大家都会这么做。
+
+### 304 Not Modified
+
+表示客户端发送附带条件的请求时，服务器端允许请求访问资源，但因发生请求为满足条件的情况后，直接返回`304 Not Modified`（服务器端资源未改变，可直接使用客户端未过期的缓存）。304返回不包含任何响应的主体。
+
+[^附带条件的请求]: 是指采用GET方法的请求报文中包含If-Match，If-Modified-Since，If-None-Match，If-Range，If-Unmodified-Since中任一首部
+
+### 307 Temporary Redirect
+
+临时重定向。与`302 Found`有相同的含义。307会遵照浏览器的标准，不会从POST变成GET。但是，对于处理响应时的行为，每种浏览器有可能出现不同的情况。
+
+## 4XX Client Error
+
+### 400 Bad Request
+
+表示请求报文中存在语法错误。
+
+### 401 Unauthorized
+
+表示发送的请求需要有通过HTTP认证（BASIC认证、DIGEST认证）的认证信息。若之前已进行过一次请求，则表示用户认证失败。
+
+返回含有401的响应必须包含一个适用于被请求资源WWW-Authenticate首部用以质询(challenge)用户信息。当浏览器初次接收到401响应，会弹出认证用的对话窗口。
+
+### 403 Forbidden
+
+表示对请求资源的访问被服务器拒绝了。服务器端没有必要给出拒绝的详细理由，也可以在实体的主要部分对原因进行描述，就可以让用户看到。
+
+### 404 Not Found
+
+表示服务器上无法找到请求的资源。除此之外，也可以在服务器端拒绝请求且不想说明理由时使用。
+
+## 5XX Server Error
+
+### 500 Internal Server Error
+
+表明服务器端在执行请求时发生了错误。也有可能是Web应用存在bug或某些临时的故障。
+
+### 503  Service Unavailable
+
+表明服务器暂时处于超负载或正在进行停机维护，现在无法处理请求。如事先得知解除以上状况需要的时间，最好写入Retry-After首部字段再返回给客户端。
+
+# 与HTTP协作的Web服务器
+
+## 用单台虚拟主机实现多个域名
+
+HTTP/1.1规范允许一台HTTP服务器搭建多个Web站点。
