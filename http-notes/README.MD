@@ -623,15 +623,197 @@ HTTP 首部字段将定义成缓存代理和非缓存代理的行为，分为 2 
 
 #### 表示是否能缓存的指令
 
-- public指令
+- public
+
+  `Cache-Control: public`
 
   当指定使用 public 指令时，则明确表明其他用户也可利用缓存。
 
-- private指令
+- private
+
+  `Cache-Control: private`
 
   当指定 private 指令后，响应只以特定的用户作为对象，与 public 相反。缓存服务器会对该特定用户提供资源缓存的服务，对于其他用户发送过来的请求，代理服务器则不会返回缓存。
 
-- no-cache指令
+- no-cache
+
+  `Cache-Control: no-cache`
 
   使用 no-cache 指令的目的是为了防止从缓存中返回过期的资源。客户端发送的请求中包含 no-cache 指令，则表示客户端将不会接受缓存过的响应。服务器返回的响应中如果包含 no-cache 指令，那么缓存服务器不能对资源进行缓存。
 
+  `Cache-Control: no-cache=Location`
+
+  由服务器返回的响应中，若报文首部字段 Cache-Control 中对 no-cache 字段名具体指定参数值，那么客户端在接收到这个响应报文后，就不能使用缓存。只能在响应指令中指定该参数。
+
+#### 控制可执行缓存的对象的指令
+
+- no-store
+
+  `Cache-Control: no-store`
+
+  该指令规定缓存不能在本地存储请求或响应的任一部分。
+
+#### 指定缓存期限和认证的指令
+
+- s-maxage
+
+  `Cache-Control: s-maxage=60480(s)`
+
+  功能和 max-age 相同，不同点是 s-maxage 指令只适用于供多位用户使用的公共缓存服务器。也就是说，对于向同一用户重复返回响应的服务器来说，这个指令没有任何作用。另外，当使用 s-maxage 指令后，则直接忽略对 Expires 首部字段及 max-age 指令的处理。
+
+- max-age
+
+  `Cache-Control: max-age=60480(s)`
+
+  当**请求**中包含 max-age 时，如果判定缓存资源的缓存时间数值比指定时间的数值更小，那么客户端就接受缓存的资源。当`max-age=0`时缓存服务器通常需要将请求转发给源服务器。当**响应**中包含 max-age 时，缓存服务器将不对资源的有效性再作确认，而 max-age 数值代表资源保存为缓存的最长时间。
+
+  HTTP/1.1版本的缓存服务器会优先处理 max-age，忽略Expires。而 HTTP/1.0 版本会优先处理 Expires，忽略 max-age。
+
+- min-fresh
+
+  `Cache-Control: min-fresh=60(s)`要求缓存服务器返回至少还未过指定时间的缓存资源
+
+- max-stale
+
+  `Cache-Control: max-stale=3600(s)`指示缓存资源即使过期也照常接收。如未指定具体数字，那么即使过期，只要仍处于 max-stale 指定的时间内，仍旧会被客户端接收。
+
+- only-if-cached
+
+  `Cache-Control: only-if-cached`表示客户端仅在缓存服务器本地缓存目标资源的情况下才会要求其返回。换言之，该指令要求缓存服务器不重新加载响应，也不会再次确认资源有效性。若发送请求缓存服务器的本地缓存无响应，则返回状态码`504 Gateway Timeout`
+
+- must-revalidate
+
+  `Cache-Control: must-revalidate`代理会向源服务器再次验证即将返回的响应缓存目前是否仍然有效。若代理无法连通源服务器再次获取有效资源的话，缓存必须给客户端一条`504 Gateway Timeout`状态码。
+
+  使用 must-revalidate 指令会忽略请求的 max-stale 指令。
+
+- proxy-revalidate
+
+  `Cache-Control: proxy-revalidate`要求所有的缓存服务器在接收到客户端带有该指令的请求返回响应之前，必须再次验证缓存的有效性。
+
+- no-transform
+
+  `Cache-Control: no-transform`规定无论是在请求还是响应中，缓存都不能改变实体主体的媒体类型。可以防止缓存或代理压缩图片等类似操作。
+
+#### Cache-Control 扩展
+
+- Cache-extension token
+
+  `Cache-Control: private, community="UCI"`通过 cache-extension 标记（token），可以扩展 Cache-Control 首部字段内的指令。如果缓存服务器不能理解 community 这个新指令，就会直接忽略。
+
+### Connection
+
+Connection 首部字段具备如下两个作用：
+
+#### 控制不再转发给代理的首部字段
+
+`Connection: 不再转发的首部字段名`在客户端发送请求和服务器返回响应内，使用 Connection 可控制不再转发给代理的首部字段（即 Hop-by-hop 首部）。
+
+#### 管理持久连接
+
+`Connection: close` HTTP/1.1 版本的默认连接都是持久连接。为此，客户端会在持久连接上连续发送请求。当服务器端想明确断开连接时，则指定 Connection 首部字段的值为 close。
+
+`Connection: Keep-Alive` HTTP/1.1 之前的 HTTP 版本的默认连接都是非持久连接。为此，如果想在旧版本的 HTTP 协议上为此持续连接，则需要指定 Connection 首部字段的值为 Keep-Alive。
+
+客户端发送请求给服务器时，带有`Connection: Keep-Alive`。服务器返回响应时也会加上`Connection: Keep-Alive`
+
+### Date
+
+表明创建 HTTP 报文的日期和时间。HTTP/1.1 协议使用在 RFC1123 中规定的日期时间的格式，如下所示：
+
+```http
+Date: Tue, 03 Jul 2012 04:40:59 GMT
+```
+
+之前的 HTTP 协议版本中使用在 RFC850 中定义的格式，如下所示：
+
+```http
+Date: Tue, 03-Jul-12 04:40:59 GMT
+```
+
+还有一种格式，与C标准库内的 asctime() 函数的输出格式一致：
+
+```http
+Date: Tue Jul 03 04:40:59 2012
+```
+
+### Pragma
+
+是 HTTP/1.1 之前版本的历史遗留字段，仅作为与 HTTP/1.0 的向后兼容而定义。
+
+`Pragma: no-cache` 该首部字段属于通用首部字段，但只用在客户端发送的请求中。客户端会要求所有的中间服务器不返回缓存的资源。所有的中间服务器如果都能以 HTTP/1.1 为基准，那直接采用`Cache-Control: no-cache` 指定缓存是最理想的。但要整体掌握全部中间服务器使用的 HTTP 协议版本不现实。因此，发送请求会同时含有下面两个首部字段。
+
+```http
+GET / HTTP/1.1
+Cache-Control: no-cache
+Pragma: no-cache
+```
+
+### Trailer
+
+首部字段 Trailer 会实现说明在报文主体后记录了哪些首部字段。该首部字段可应用在 HTTP/1.1 版本分块传输编码时。
+
+```http
+HTTP/1.1 200 OK
+Date: Tue, 03 Jul 2012 04:40:56 GMT
+Content-Type: text/html
+...
+Transfer-Encoding: chunked
+Trailer: Expires
+
+...(报文主体)...
+0
+Expires: Tue, 28 Sep 2004 23:59:59 GMT
+```
+
+指定首部字段 Trailer 的值为 Expires，在报文主体之后（分块长度 0 之后）出现了首部字段 Expires。
+
+### Transfer-Encoding
+
+首部字段 Transfer-Encoding 规定了传递报文主体时采用的编码方式。HTTP/1.1 的传输编码方式仅对分块传输编码有效。
+
+`Transfer-Encoding: chunked`
+
+### Upgrade
+
+首部字段 Upgrade 用于检测 HTTP 协议及其他协议是否可使用更高的版本进行通信，其参数值可以用来指定一个完全不同的通信协议。
+
+```http
+GET /index.html HTTP/1.1
+Upgrade: TLS/1.0
+Connection: Upgrade
+```
+
+```http
+HTTP/1.1 101 Switching Protocols
+Upgrade: TLS/1.0, HTTP/1.1
+Connection: Upgrade
+```
+
+使用首部字段 Upgrade 时，还需要额外指定 `Connection: Upgrade`。对于附有 Upgrade 的请求，服务器可用 `101 Switching Protocols`状态码作为响应返回。
+
+### Via
+
+使用首部字段 Via 是为了追踪客户端与服务器之间的请求和响应报文的传输路径，还可以避免请求回环的发生。经常会和 TRACE 方法一起使用。
+
+### Warning
+
+HTTP/1.1 的 Warning 首部是从 HTTP/1.0 的响应首部（Retry-After）演变过来的。该首部通常会告知用户一些与缓存相关的问题的警告。
+
+```http
+HTTP/1.1 200 OK
+Warning: 113 gw.hackr.jp:8080 "Heuristic expiration" Tue, 03 Jul => 2012 05:09:44 GMT
+Warning: [警告码] [警告的主机:端口号] "[警告内容]" ([日期时间])
+```
+
+HTTP/1.1 中定义了 7 种警告。
+
+| 警告码  | 警告内容                                     | 说明                                    |
+| ---- | ---------------------------------------- | ------------------------------------- |
+| 110  | Response is stale（响应已过期）                 | 代理返回已过期的资源                            |
+| 111  | Revalidation failed（再验证失败）               | 代理再验证资源有效性时失败（服务器无法到达等原因）             |
+| 112  | Disconnection operation（断开连接操作）          | 代理与互联网连接被故意切断                         |
+| 113  | Heuristic expiration（试探性过期）              | 响应的使用期超过 24 小时（有效缓存的设定时间大于 24 小时的情况下） |
+| 119  | Miscellaneous warning（杂项警告）              | 任意的警告内容                               |
+| 214  | Transformation applied（使用了转换）            | 代理对内容编码或媒体类型等执行了某些处理时                 |
+| 299  | Miscellaneous persistent warning（持久杂项警告） | 任意的警告内容                               |
