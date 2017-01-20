@@ -817,3 +817,349 @@ HTTP/1.1 中定义了 7 种警告。
 | 119  | Miscellaneous warning（杂项警告）              | 任意的警告内容                               |
 | 214  | Transformation applied（使用了转换）            | 代理对内容编码或媒体类型等执行了某些处理时                 |
 | 299  | Miscellaneous persistent warning（持久杂项警告） | 任意的警告内容                               |
+
+## 请求首部字段
+
+### Accept
+
+```
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+```
+
+Accept 首部字段可通知服务器，用户代理能够处理的媒体类型及媒体类型的相对优先级。可使用 type/subtype 这种形式，一次指定多种媒体类型。下面举几个媒体类型的例子。
+
+- 文本文件
+
+  ```
+  text/html, text/plain, text/css...  application/xhtml+xml, application/xml...
+  ```
+
+- 图片文件
+
+  ```
+  image/jpeg, image/gif, image/png...
+  ```
+
+- 视频文件
+
+  ```
+  video/mpeg, video/quicktime
+  ```
+
+- 应用程序使用的二进制文件
+
+  ```
+  application/octet-stream, application/zip...
+  ```
+
+如果浏览器不支持显示格式，则使用其他指定的类型显示。若想给显示的媒体类型增加优先级，则使用`q=`来额外表示权重值，用分号进行分隔。q的范围是0~1。当服务器提供多种内容时，优先返回权重值最高的媒体类型。
+
+### Accept-Charset
+
+```
+Accept-Charset: iso-8859-5, unicode-1-1;q=0.8
+```
+
+可以用来通知服务器用户代理支持的字符集及字符集的相对优先顺序。可以指定多种字符集，用q表示权重。
+
+### Accept-Encoding
+
+```
+Accept-Encoding: gzip, deflate
+```
+
+用来告知服务器用户代理支持的内容编码及内容编码的优先级顺序。可一次指定多种内容编码，用q表示权重。可使用星号`*`作为通配符，指定任意的编码格式。
+
+- gzip
+
+  由文件压缩程序 gzip（GNU zip）生成的编码格式（RFC1952），采用 Lempel-Ziv 算法（LZ77）及 32 位循环冗余校验（Cyclic Redundancy Check，通称 CRC）
+
+- compress
+
+  由 UNIX 文件压缩程序 compress 生成的编码格式，采用 Lempel-Ziv-Welch 算法（LZW）
+
+- deflate
+
+  组合使用 zlib 格式（RFC1950）及由 deflate 压缩是算法（RFC1951）生成的编码格式。
+
+- identity
+
+  不执行压缩或不会变化的默认编码格式
+
+### Accept-Language
+
+```
+Accept-Language: zh-cn,zh;q=0.7,en-us,en;q=0.3
+```
+
+用来告知服务器用户代理能够处理的自然语言集，可一次指定多种语言，用q表示权重。
+
+### Authorization
+
+```
+Authorization: Basic dWVub3NlbjpwYXNzd29yZA==
+```
+
+用来告知服务器，用户代理的认证信息（证书值）。想通过服务器认证的用户代理会在接收到返回的 401 状态码响应后，把首部字段 Authorization 加入请求中。
+
+### Expect
+
+```
+Expect: 100-continue
+```
+
+告知服务器期望出现的某种特定行为。如服务器无法理解客户端的期望，会返回状态码`417 Expectation Failed`。HTTP/1.1 只定义了100-continue（状态码`100 Continue`之意）。等待状态码 100 响应的客户端发送请求时需要指定 `Expect: 100-continue`
+
+### From
+
+```
+From: info@hackr.jp
+```
+
+用来告知服务器使用用户代理的用户的电子邮件地址。
+
+### Host
+
+```
+Host: www.hackr.jp
+```
+
+告知服务器请求的资源所处的互联网主机名和端口号。Host 首部字段是 HTTP/1.1 规范内唯一一个必须被包含在请求内的首部字段。首部字段 Host 和以单台服务器分配多个域名的虚拟主机的工作机制又很密切的关系。
+
+### If-XXX
+
+形如 If-xxx 这种样式的请求首部字段，都可称为条件请求。服务器只有判断指定条件为真时，才会执行请求。
+
+#### If-Match
+
+```
+If-Match: "123456"
+```
+
+告知服务器匹配资源所用的实体标记（ETag）值。这时的服务器无法使用弱 ETag 值。服务器会比对 If-Match 的字段值和资源的 ETag 值，仅当两者一致时才会执行请求。反之返回状态码 `412 Precondition Failed` 的响应。还可以使用`*`全匹配。
+
+#### If-None-Match
+
+与 If-Match 作用相反。用于指定 If-None-Match 字段值的实体标记（ETag）值与请求资源的 ETag 不一致时处理请求。在 GET 和 HEAD 方法中使用首部字段 If-None-Match 可获取最新的资源。
+
+#### If-Modified-Since
+
+```
+If-Modified-Since: Thu, 15 Apr 2004 00:00:00 GMT
+```
+
+告知服务器在 If-Modified-Since 指定的日期之后更新过资源，则希望能处理该请求。若未更新过，则返回状态码 `304 Not Modified` 的响应。可以通过确认首部字段 Last-Modified 来确定资源的更新日期时间。
+
+#### If-Unmodified-Since
+
+```
+If-Unmodified-Since: Thu, 03 Jul 2012 00:00:00 GMT
+```
+
+与 If-Modified-Since 作用相反。告知服务器，指定的请求资源在指定日期之后未更新过，则处理请求。如果之后发生过更新，则返回状态码 `412 Precondition Failed` 。
+
+#### If-Range
+
+```http
+GET /index.html HTTP/1.1
+If-Range: "123456"
+Range: bytes=5001-10000
+```
+
+告知服务器若指定的 If-Range 字段值（ETag 值或者时间）和请求资源的 ETag 值或时间相一致时，则作为范围请求处理。反之，则返回全体资源。
+
+如果使用 If-Match，如果服务器端资源已更新，则会返回 `412 Precondition Failed` ，客户端重新发送请求，再返回新资源。与使用 If-Range 比起来，需要花费两倍的功夫。
+
+### Max-Forwards
+
+```
+Max-Forwards: 10
+```
+
+通过 TRACE 方式或 OPTIONS 方式，发送包含首部字段 Max-Forwards 的请求时，该字段以十进制整数形式指定可经过的服务器最大数目。服务器在往下一个服务器转发请求之前，会将 Max-Forwards 的值减 1 后重新复制。当服务器接收到 Max-Forwards 值为 0 的请求时，则不再进行转发，而是直接返回响应。可以用于对传输路径上的通信状态有所把握。
+
+### Proxy-Authorization
+
+```
+Proxy-Authorization: Basic dGlwOjkpNLAGfFY5
+```
+
+接收到代理服务器发来的认证质询时，客户端会发送包含首部字段 Proxy-Authorization 的请求，以告知服务器认证所需要的信息。
+
+这个行为与客户端和服务器之间的 HTTP 访问认证相似，不同处在于，认证行为发生在客户端与代理之间。
+
+### Range
+
+```
+Range: bytes=5001-10000
+```
+
+告知服务器资源的指定范围。如果能处理范围请求则返回 `206 Partial Content` 的响应。无法处理则返回 `200 OK` 的响应及全部资源。
+
+### Referer
+
+```
+Referer: http://www.hackr.jp/index.htm
+```
+
+告知服务器请求的原始资源的URI。客户端一般都会发送 Referer 给服务器。但当直接在浏览器的地址栏输入 URI，处于安全考虑时，也可以不发送该首部字段。因为原始资源的URI中的查询字符串可能含有ID和密码等保密信息。
+
+### TE
+
+```
+TE: gzip, deflate;q=0.5
+```
+
+告知服务器客户端能够处理响应的传输编码方式及相对优先级，与 Accept-Encoding 的功能相似，但是用于传输编码。除指定传输编码之外，还可以指定伴随 trailer 字段的分块传输编码方式。
+
+### User-Agent
+
+```
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:13.0) Gecko/=>20100101 Firefox/13.0.1
+```
+
+会将创建请求的浏览器和用户代理名称等信息传达给服务器。由网络爬虫发起请求时，有可能会在字段内添加爬虫作者的电子邮件地址。此外，如果请求经过代理，那么中间也很可能被添加上代理服务器的名称。
+
+## 响应首部字段
+
+### Accept-Ranges
+
+```
+Accept-Ranges: bytes
+```
+
+用来告知客户端服务器是否能处理范围请求，以指定获取服务器端某个部分的资源。若可处理范围请求指定其为 `bytes` ，反之指定其为 `none` 。
+
+### Age
+
+```
+Age: 600(s)
+```
+
+告知服务器源服务器在多久前创建了响应。若创建该响应的服务器是缓存服务器，Age 值是指缓存后的响应再次发起认证到认证完成的时间值。代理创建响应时必须加上首部字段 Age。
+
+### ETag
+
+```
+ETag: "82e22293907ce725faf67773957acd12"
+```
+
+告知客户端实体标识。它是一种可将资源以字符串形式做唯一性标识的方式。每份资源都会分配对应的 ETag 值，当资源更新时，ETag 值也需要更新。资源被缓存时，就会分配唯一性标识。当使用不同语言环境浏览器访问同一个 URI 时，会返还对应语言的资源。若下载过程中出现连接中断、再连接的情况，都会依照 ETag 值来指定资源。
+
+#### 强 ETag 值
+
+```
+ETag: "usagi-1234"
+```
+
+强 ETag 值，不论实体发生多么细微的变化都会改变其值。
+
+#### 弱 ETag 值
+
+```
+ETag: W/"usagi-1234"
+```
+
+弱 ETag 值只用于提示资源是否相同。只有资源发生了根本变化，产生差异时才会改变 ETag 值。
+
+### Location
+
+```
+Location: http://www.usagidesign.jp/sample.html
+```
+
+将响应接收方引导至某个与请求 URI位置不同的资源。基本上，该字段会配合 `3xx: Redirection` 的响应，提供重定向的 URI。
+
+### Proxy-Authenticate
+
+```
+Proxy-Authenticate: Basic realm="Usagidesign Auth"
+```
+
+把由代理服务器所需求的认证信息发送给客户端。与客户端和服务器之间的 HTTP 访问认证 WWW-Authenticate 的行为相似，不同之处在于其认证行为是在客户端与代理服务器之间进行的。
+
+### Retry-After
+
+```
+Retry-After: 120
+```
+
+告知客户端应该在多久之后再次发送请求。主要配合 `503 Service Unavailable` 响应，或 `3xx Redirect`响应。字段可以指定为具体的日期时间，也可以是创建响应后的秒数。
+
+### Server
+
+```
+Server: Apache/2.2.17 (Unix)
+```
+
+告知客户端当前服务器上安装的 HTTP 服务器应用程序的信息。可包括软件应用名称，版本号和安装时启用的可选项。
+
+```
+Server: Apache/2.2.6 (Unix) PHP/5.2.5
+```
+
+### Vary
+
+```
+Vary: Accept-Language
+```
+
+可对缓存进行控制。源服务器会向代理服务器传达关于本地缓存使用方法的命令。从代理服务器接收到源服务器返回包含 Vary 指定项的响应之后，若再要进行缓存，仅对请求中含有相同 Vary 指定首部字段的请求返回缓存。即使对相同资源发起请求，但由于 Vary 指定的首部字段不相同，因此必须要从源服务器重新获取资源。
+
+### WWW-Authenticate
+
+```
+WWW-Authenticate: Basic realm="Usagidesign Auth"
+```
+
+用于 HTTP 访问认证。告知客户端适用于访问请求 URI 所指定资源的认证方案（Basic 或是 Digest）和带参数指示的质询（challenge）。状态码 `401 Unauthorized` 响应中，肯定带有 WWW-Authenticate。realm 字段的字符串是为了辨别请求 URI 指定资源所受到的保护策略。
+
+## 实体首部字段
+
+### Allow
+
+```
+Allow: GET, HEAD
+```
+
+通知客户端能够支持 Request-URI 指定资源的所有 HTTP 方法。当服务器收到不支持的 HTTP 方法时，会以状态码 `405 Method Not Allow` 作为响应返回，同时将 Allow 写入首部字段返回。
+
+### Content-Encoding
+
+```
+Content-Encoding: gzip
+```
+
+会告知客户端服务器对实体的主体部分选用的内容编码方式。内容编码是指在不丢失实体信息的前提下所进行的压缩。
+
+### Content-Language
+
+```
+Content-Language: zh-CN
+```
+
+告知客户端，实体主体使用的自然语言。
+
+### Content-Length
+
+```
+Content-Length: 15000
+```
+
+表明了实体主体部分的大小（单位是字节）。对实体主体进行内容编码传输时，不能再使用 Content-Length 首部字段。
+
+### Content-Location
+
+```
+Content-Location: http://www.hackr.jp/index-ja.html
+```
+
+给出报文主体部分相对应的 URI。和 Location 不同，Content-Location 表示的是报文主体返回资源对应的 URI。比如，对于使用首部字段 Accept-Language 的服务器驱动请求，当返回的页面内容与实际请求的对象不同时，首部字段 Content-Location 内容会写明 URI。（访问 http://www.hackr.jp/ 返回的对象确实 http://www.hackr.jp/index-ja.html 等类似情况）
+
+### Content-MD5
+
+```
+Content-MD5: OGFkZDUwNGVhNGY3N2MxMDIwZmQ4NTBmY2IyTY==
+```
+
+是一串由 MD5 算法生成的值，其目的在于检查报文主体在传输过程中是否保持完整，以及确认传输到达。
