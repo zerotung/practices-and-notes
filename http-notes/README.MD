@@ -431,8 +431,8 @@ HTTP协议的请求和响应报文中必定包含HTTP首部。首部内容为客
 ```http
 GET / HTTP/1.1
 Host: hackr.jp
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:13.0) Gecko/=>20100101 Firefox/13.0
-Accept: text/html, application/xhtml+xml, application/xml; q=0.9, =>*/*; q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:13.0) Gecko/= >20100101 Firefox/13.0
+Accept: text/html, application/xhtml+xml, application/xml; q=0.9 */*; q=0.8
 Accept-Language: ja, en-us; q=0.7,en; q=0.3
 Accept-Encoding: gzip, deflate
 DNT: 1
@@ -1162,4 +1162,140 @@ Content-Location: http://www.hackr.jp/index-ja.html
 Content-MD5: OGFkZDUwNGVhNGY3N2MxMDIwZmQ4NTBmY2IyTY==
 ```
 
-是一串由 MD5 算法生成的值，其目的在于检查报文主体在传输过程中是否保持完整，以及确认传输到达。
+是一串由 MD5 算法生成的值，其目的在于检查报文主体在传输过程中是否保持完整，以及确认传输到达。对报文主体执行 MD5 算法获得的 128 位二进制数，再通过 Base64 编码后将结果写入 Content-MD5 字段值。客户端会以同样的方式计算比较，确保报文的准确性。
+
+无法通过 Content-MD5 对内容上的偶发性改变查证，也无法检查出恶意篡改。因为内容如果能够被篡改，那么意味着 Content-MD5 同样也可以重新计算然后篡改。
+
+### Content-Range
+
+```
+Content-Range: bytes 5001-10000/10000
+```
+
+针对范围请求，返回响应时使用 Content-Range，能告知客户端作为响应返回的实体的哪个部分符合范围请求。字段值以字节为单位，表示当前发送部分及整个实体大小。
+
+### Content-Type
+
+```
+Content-Type: text/html; charset=UTF-8
+```
+
+说明了实体主体内对象的媒体类型。和首部字段 Accept 一样使用 `type/subtype` 形式值。
+
+### Expires
+
+```
+Expires: Wed, 04 Jul 2012 08:26:05 GMT
+```
+
+会将资源失效的日期告知客户端。缓存服务器会以缓存来应答请求，直到超过指定时间。源服务器不希望缓存服务器对资源缓存时，最好在 Expires 字段内写入与首部字段 Date 相同的时间值。但是，当首部字段 Cache-Control 有指定 max-age 指令时，将优先处理 max-age 指令。
+
+### Last-Modified
+
+```
+Last-Modified: Wed, 23 May 2012 09:59:55 GMT
+```
+
+指明资源最终修改的时间。一般来说，这个值就是 Request-URI 指定资源被修改的时间。
+
+## 为 Cookie 服务的首部字段
+
+Cookie 的工作机制是用户识别及状态管理。调用 Cookie 时，由于可校验 Cookie 的有效期，以及发送方的域、路径、协议等信息，所以正规发布的 Cookie 内的数据不会因来自其他 Web 站点和攻击者的攻击而泄露。
+
+Cookie的规格标准文档有以下4种。
+
+- 由网景公司颁布的规格标准（目前最为普及的 Cookie 方式是以此为基准的）
+- RFC2109（已淡出人们的视线）
+- RFC2965（定义了新的 HTTP 首部 Set-Cookie2 和 Cookie2，事实上几乎没投入使用）
+- RFC6265（将网景公司制定的标准作为业界事实标准，重新定义 Cookie 标准后的产物）
+
+### Set-Cookie
+
+```
+Set-Cookie: status=enable; expires=Tue, 05 Jul 2011 07:26:31 GMT; path=/; domain=.hack.jp;
+```
+
+| 属性           | 说明                                       |
+| ------------ | ---------------------------------------- |
+| NAME=VALUE   | 赋予 Cookie 的名称和其值（必须项）                    |
+| expires=DATE | Cookie 的有效期（若不明确指定则默认为浏览器关闭前为止）          |
+| path=PATH    | 将服务器上的文件目录作为 Cookie 的适用对象（若不指定则默认为文档所在的文件目录） |
+| domain=域名    | 作为 Cookie 适用对象的域名（若不指定则默认为创建 Cookie 的服务器的域名） |
+| Secure       | 仅在 HTTPS 安全通信时才会发送 Cookie                |
+| HttpOnly     | 加以限制，使 Cookie 不能被 JavaScript 脚本访问        |
+
+- expires 属性
+
+  一旦 Cookie 从服务器端发送至客户端，服务器端就不存在可以显式删除 Cookie 的方法。可以通过覆盖已过期的 Cookie，实现对客户端 Cookie 的实质性删除操作。
+
+- path 属性
+
+  有办法可避开这项限制，安全机制效果不好。
+
+- domain 属性
+
+  除了针对具体指定的多个域名发送 Cookie 之外，不指定 domain 属性更安全。
+
+- secure 属性
+
+  ```
+  Set-Cookie: name=value; secure
+  ```
+
+  仅在 HTTPS 安全连接的情况下才会进行 Cookie 的回收，即使域名相同使用 HTTP 也不会进行回收。当省略 secure 属性时，不论 HTTP 还是 HTTPS，都会对 Cookie 进行回收。
+
+- HttpOnly 属性
+
+  ```
+  Set-Cookie: name=value; HttpOnly
+  ```
+
+  主要目的是防止跨站脚本攻击（Cross-site scripting，XSS）对 Cookie 的信息窃取。
+
+### Cookie
+
+```
+Cookie: status=enable
+```
+
+告知服务区，当前客户端想获得 HTTP 状态管理支持时，就会在请求中包含从服务器接收到的 Cookie。接收到多个 Cookie 时，同样可以以多个 Cookie 形式发送。
+
+## 其他首部字段
+
+### X-Frame-Options
+
+```
+X-Frame-Options: DENY
+```
+
+属于 HTTP 响应首部，用于控制网站内容在其他 Web 网站的 Frame 标签内的显示问题。主要目的是防止点击劫持（clickjacking）攻击。可以指定两个字段值。
+
+- DENY：拒绝
+- SAMEORIGIN：仅同源域名下的页面匹配时许可。
+
+现在主流的浏览器都已支持。能在所有的 Web 服务器端预先设定好 X-Frame-Options 是最理想的状态。
+
+### X-XSS-Protection
+
+```
+X-XSS-Protection: 1
+```
+
+属于 HTTP 响应首部，是针对跨站脚本攻击（XSS）的一种对策，用于控制浏览器 XSS 防护机制的开关。0 时将 XSS 过滤设置成无效状态，1 时有效。
+
+### DNT
+
+```
+DNT: 1
+```
+
+属于 HTTP 请求首部，DNT  (Do Not Track)，拒绝个人信息被手机，是表示拒绝被精准广告追踪的一种方法。0 表示同意被追踪，1 为拒绝。
+
+### P3P
+
+```
+P3P: CP="CAO DSP LAW CURa ADMa DEVa TAIa PSAa PSDa IVAa IVDa OUR BUS IND UNI COM NAV INT"
+```
+
+属于 HTTP 响应首部，通过利用P3P (The Platform for Privacy Preferences，在线隐私偏好平台)技术，可以让 Web 网站上的个人隐私变成一种仅供程序可理解的形式，以达到保护用户隐私的目的。
+
