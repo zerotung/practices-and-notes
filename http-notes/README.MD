@@ -1680,3 +1680,63 @@ WebDAV（Web-based Distributed Authoring and Versioning，基于万维网的分�
 >
 > 还有一些其他原因，比如，作为 HTTP 客户端的浏览器已经相当普遍，HTTP 服务器的数量已颇具规模，HTTP 本身就是优异的应用等。
 
+# 构建 Web 内容的技术
+
+## Web 应用
+
+### 与 Web 服务器及程序协作的 CGI
+
+CGI（Common Gateway Interface，通用网关接口）是指 Web 服务器在接收到客户端发送过来的请求后转发给程序的一组机制。在 CGI 的作用下，程序会对请求内容做出相应的动作，比如创建 HTML 等动态内容。
+
+使用 CGI 的程序叫做 CGI 程序，通常是用 Perl、PHP、Ruby 和 C 等编程语言编写而成。
+
+### 因 Java 而普及的 Servlet
+
+Servlet 是一种能在服务器上创建动态内容的程序。Servlet 是用 Java 语言实现的一个接口，属于面向企业级 Java（JavaEE, Java Enterprise Edition） 的一部分。
+
+之前提及的 CGI，由于每次接到请求，程序都要跟着启动一次。因此一旦访问量过大，Web 服务器要承担相当大的负载。而 Servlet 运行在于 Web 服务器相同的进程中，因此受到的负载较小。Servlet 的运行环境叫做 Web 容器或 Servlet 容器。Servlet 作为解决 CGI 问题的对抗技术，随 Java 一起得到普及。
+
+## 数据发布的格式及语言
+
+### 可扩展标记语言
+
+XML（eXtensible Markup Language，可扩展标记语言）是一种可按应用目标进行扩展的通用标记语言。旨在通过使用 XML，使互联网数据共享变的更容易。XML 和 HTML 都是从标准通用标记语言 SGML（Standard Generalized Markup Language）简化而成。与 HTML 相比，它对数据的记录方式做了特殊处理。
+
+为了保持数据的正确读取，HTML 不适合用来记录数据结构。XML 和 HTML 一样，使用标签构成树形结构，并且可自定义扩展标签。从 XML 文档中读取数据比起 HTML 更为简单。由于 XML 的结构基本上都是用标签分隔而成的树形结构，因此通过语法分析器（Parser）的解析功能解析 XML 结构并取出数据元素，可更容易地对数据进行读取。
+
+### 发布更新信息的 RSS/Atom
+
+RSS（简易信息聚合，也叫聚合内容）和 Atom 都是发布新闻或博客日志等更新信息文档的格式的总称。两者都用到了 XML。用于订阅博客更新信息的 RSS 阅读器，这种应用几乎支持 RSS 的所有版本以及 Atom。下面是 RSS1.0 的示例。
+
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<?xml-stylesheet href="http://d.hatena.ne.jp/sen-u/rssxsl" type="text/xsl" media="screen" ?>
+<rdf:RDF
+         xmlns="http://purl.org/rss/1.0/"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:lang="ja">
+<channel rdf:about="http://d.hatena.ne.jp/sen-u/rss">
+  <title>兔子的文学日记</title>
+  <link>http://d.hatena.ne.jp/sen-u/</link>
+  <description>兔子的文学日记</description>
+</channel>
+
+<item rdf:about="http://d.hatena.ne.jp/sen-u/20121215/p1">
+  <title>[security]提供脆弱性悬赏奖金计划的网站一栏</title>
+  <link>http://d.hatena.ne.jp/sen-u/20121215/p1</link>
+  <description>正是所谓“是所谓 Bounty Programs”、处理接受Web脆弱性的相关信息，并提供奖金的计划...</description>
+  <dc:creator>sen-u</dc:creator>
+  <dc:date>2012-12-15</dc:date>
+  <dc:subject>security</dc:subject>
+</item>
+```
+
+### JavaScript 衍生的轻量级易用 JSON
+
+JSON（JavaScript Object Notation）是一种以 JavaScript（ECMAScript）的对象表示法为基础的轻量级数据标记语言。能够处理的数据类型有false/null/true/对象/数组/数字/字符串，这 7 种类型。
+
+```json
+{"name":"Web App Security", "num":"TR001"}
+```
+
+JSON 让数据更轻更纯粹，并且 JSON 的字符串形式可悲 JavaScript 轻易地读入。当初配合 XML 使用的 Ajax 技术也让 JSON 的应用变的更为广泛。
