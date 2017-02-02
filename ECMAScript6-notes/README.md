@@ -1090,7 +1090,7 @@ tokenize(TOKEN_Y, '3x + 4') // ['3']
 tokenize(TOKEN_G, '3x + 4') // ['3', '+', '4']
 ```
 
-### sticky 属性
+## sticky 属性
 
 与 `y` 修饰符相匹配，ES6 的正则对象多了 `sticky` 属性，表示是否设置了 `y` 修饰符。
 
@@ -1098,7 +1098,7 @@ tokenize(TOKEN_G, '3x + 4') // ['3', '+', '4']
 var r = /hello\d/y; r.sticky // true
 ```
 
-### flags 属性
+## flags 属性
 
 ES6 为正则表达式新增了 `flags` 属性，会返回正则表达式的修饰符
 
@@ -1107,7 +1107,7 @@ ES6 为正则表达式新增了 `flags` 属性，会返回正则表达式的修�
 /abc/ig.flags // "gi"
 ```
 
-### RegExp.escape()
+## RegExp.escape()
 
 字符串必须转义，才能作为正则模式。
 
@@ -1121,7 +1121,7 @@ escapeRegExp(str) // "\/path\/to\/resource\.html\?search=query"
 
 字符串转义以后，可以使用 RegExp 构造函数生成正则模式。
 
-### s 修饰符：dotAll 模式
+## s 修饰符：dotAll 模式
 
 正则表达式中，点 `.` 是一个特殊的字符，代表任意单个字符（除行终止符）。以下四个字符属于“行终止符”
 
@@ -1139,14 +1139,14 @@ escapeRegExp(str) // "\/path\/to\/resource\.html\?search=query"
 
 `/s` 修饰符和多行修饰符 `/m` 不冲突，两者一起使用的情况下，`.` 匹配所有字符，而 `^` 和 `$` 匹配每一行的行首和行尾。
 
-### 后行断言
+## 后行断言
 
 JavaScript 语言的正则表达式，只支持先行断言（lookahead）和先行否定断言（negative lookahead），不支持后行断言（lookbehind）和后行否定断言（negative lookahead）。
 
 - “先行断言”指的是，`x` 只有在 `y` 前面才匹配，必须写成 `/x(?=y)/` 
 - “先行否定断言”值的是，`x` 只有不在 `y` 前面才匹配，必须写成 `/x(?!y)/` 
 
-### Unicode 属性类
+## Unicode 属性类
 
 目前，有一个提案，引入了一种新的类的写法 `\p{…}` 和 `\P{…}` ，允许正则表达式匹配符合 Unicode 某种属性的所有字符。
 
