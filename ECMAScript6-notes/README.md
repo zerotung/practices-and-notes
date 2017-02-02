@@ -927,3 +927,250 @@ tag`\unicode and \u{55}`
 
 注意，这种字符串转义的放松，只在标签模板解析字符串时生效，其他场合依然会报错。
 
+# 正则的扩展
+
+## RegExp 构造函数
+
+在 ES5 中，RegExp 构造函数的参数有两种情况。
+
+- 第一个参数是字符串，第二个参数表示正则表达式的修饰符（flag）
+
+  ```javascript
+  var regex = new RegExp('xyz', 'i'); /* 等价于 */ var regex = /xyz/i;
+  ```
+
+- 参数是一个正则表达式，这时返回一个原有正则表达式的拷贝
+
+  ```javascript
+  var regex = new RegExp(/xyz/i); /* 等价于 */ var regex = /xyz/i;
+  ```
+
+ES5 不允许此时使用第二参数，添加修饰符，否则会报错。ES6 改变了这种行为。第二个参数指定的修饰符会覆盖原有正则表达式的修饰符。
+
+```javascript
+var regex = new RegExp(/xyz/, 'i'); // ES5
+// Uncaught TypeError: Cannot supply flags when constructing one RegExp from another
+new RegExp(/abc/ig, 'i').flags // "i"
+```
+
+## 字符串的正则方法
+
+字符串对象共有 4 个方法，可以使用正则表达式：`match()`、`replace()`、`search()` 和 `split()`。
+
+ES6 将这 4 个方法，在语言内部全部调用 RegExp 的实例方法，从而做到所有与正则相关的方法，全都定义在 RegExp 对象上。
+
+- `String.prototype.match` 调用 `RegExp.prototype[Symbol.match]`
+- `String.prototype.replace` 调用 `RegExp.prototype[Symbol.replace]`
+- `String.prototype.search` 调用 `RegExp.prototype[Symbol.search]`
+- `String.prototype.split` 调用 `RegExp.prototype[Symbol.split]`
+
+## u修饰符
+
+ES6 对正则表达式添加 `u` 修饰符，含义为“Unicode模式”，用来正确处理大于 `\uFFFF` 的 Unicode 字符。
+
+```javascript
+/^\uD83D/u.test('\uD83D\uDC2A') // false
+/^\uD83D/.test('\uD83D\uDC2A') // true
+```
+
+### 点字符
+
+点 `.` 字符在正则表达式中，含义是除了换行符以外的任意单个字符。对于码点大于 `0xFFFF` 的 Unicode 字符，点字符不能识别，必须加上 `u` 修饰符。
+
+```javascript
+var s = '𠮷';
+/^.$/.test(s) // false
+/^.$/u.test(s) // true
+```
+
+### Unicode 字符表示法
+
+ES6 新增了使用大括号表示 Unicode 字符，这种表示法在正则表达式中必须加上 `u` 修饰符，才能识别。
+
+```javascript
+/\u{61}/.test('a') // false
+/\u{61}/u.test('a') // true
+/\u{20BB7}/u.test('𠮷') // true
+```
+
+### 量词
+
+使用 `u` 修饰符后，所有量词都会正确识别码点大于 `0xFFFF` 的 Unicode 字符。
+
+```javascript
+/a{2}/.test('aa') // true
+/a{2}/u.test('aa') // true
+/𠮷{2}/.test('𠮷𠮷') // false
+/𠮷{2}/u.test('𠮷𠮷') // true
+```
+
+另外，只有在使用 `u` 修饰符的情况下，Unicode 表达式当中的大括号才会被正确解读，否则会被解读为量词。
+
+### 预定义模式
+
+`u` 修饰符也影响到预定义模式，能否正确识别码点大于 `0xFFFF` 的 Unicode 字符。
+
+```javascript
+/^\S/.test('𠮷') // false
+/^\S$/u.test('𠮷') // true
+```
+
+上面代码的 `\S` 是预定义模式，匹配所有不是空格的字符。只有加了 `u` 修饰符，它才能正确匹配码点大于 `0xFFFF` 的 Unicode 字符。利用这点可以写出正确返回字符串长度的函数。
+
+```javascript
+function codePointLength(text) {
+  var result = text.match(/[\s\S]/gu);
+  return result ? result.length : 0'
+}
+var s = '𠮷𠮷';
+s.length // 4
+codePointLength(s) // 2
+```
+
+### i 修饰符
+
+有些 Unicode 字符的编码不同，但是字型很接近，比如 `\u0048` 和 `\u212A` 都是大写的 `K` 。
+
+```javascript
+/[a-z]/i.test('\u212A') // false
+/[a-z]/iu.test('\u212A') // true
+```
+
+## y 修饰符
+
+ES6 还为正则表达式添加了 `y` 修饰符，叫做“粘连”（sticky）修饰符。
+
+`y` 修饰符的作用与 `g` 修饰符类似，也是全局匹配，后一次匹配都从上一次匹配成功的下一位开始，不同之处在于，`g` 修饰符只要剩余位置中存在匹配就可以，而 `y` 修饰符确保匹配必须从剩余的第一个位置开始，这也就是“粘连”的含义。
+
+```javascript
+var s = 'aaa_aa_a';
+var r1 = /a+/g, r2 = /a+/y, r3 = /a+_/y;
+r1.exec(s) // ["aaa"]
+r2.exec(s) // ["aaa"]
+r3.exec(s) // ["aaa_"]
+r1.exec(s) // ["aa"]
+r2.exec(s) // null
+r3.exec(s) // ["aa_"]
+```
+
+使用 `lastIndex` 属性，可以更好地说明 `y` 修饰符。`lastIndex` 指定每次搜索的开始位置，`g` 修饰符从这个位置开始往后搜索，知道发现匹配为止。`y` 修饰符要求必须在 `lastIndex` 指定的位置发现匹配。进一步说，`y` 修饰符号隐含了头部匹配的标志 `^` 。
+
+```javascript
+const REGEX = /a/g;
+REGEX.lastIndex = 2; // 指定从2号位(y)开始匹配
+const match = REGEX.exec('xaya'); // 匹配成功
+match.index // 在3号位置匹配成功 3
+REGEX.lastIndex // 下次匹配从4号位开始 4
+REGEX.exec('xaxa') // 4号位开始匹配失败 null
+```
+
+```javascript
+const REGEX = /a/gy;
+'aaxa'.replace(REGEX, '-') // '--xa'
+'a1a2a3'.match(/a\d/y) // ["a1"]
+'a1a2a3'.match(/a\d/gy) // ["a1", "a2", "a3"]
+```
+
+`y` 修饰符的一个应用，是从字符串提取token（词元），`y` 修饰符确保了匹配之间不会有漏掉的字符。`g` 会胡烈非法字符，而 `y` 不会。更易发现错误。
+
+```javascript
+const TOKEN_Y = /\s*(\+|[0-9]+)\s*/y;
+const TOKEN_G  = /\s*(\+|[0-9]+)\s*/g;
+tokenize(TOKEN_Y, '3 + 4'); // [ '3', '+', '4' ]
+tokenize(TOKEN_G, '3 + 4'); // [ '3', '+', '4' ]
+function tokenize(TOKEN_REGEX, str) {
+  let result = [];
+  let match;
+  while (match = TOKEN_REGEX.exec(str)) {
+    result.push(match[1]);
+  }
+  return result;
+}
+tokenize(TOKEN_Y, '3x + 4') // ['3']
+tokenize(TOKEN_G, '3x + 4') // ['3', '+', '4']
+```
+
+### sticky 属性
+
+与 `y` 修饰符相匹配，ES6 的正则对象多了 `sticky` 属性，表示是否设置了 `y` 修饰符。
+
+```javascript
+var r = /hello\d/y; r.sticky // true
+```
+
+### flags 属性
+
+ES6 为正则表达式新增了 `flags` 属性，会返回正则表达式的修饰符
+
+```javascript
+/abc/ig.source // "abc"
+/abc/ig.flags // "gi"
+```
+
+### RegExp.escape()
+
+字符串必须转义，才能作为正则模式。
+
+```javascript
+function escapeExp(str) {
+  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
+}
+let str = '/path/to/resource.html?search=query';
+escapeRegExp(str) // "\/path\/to\/resource\.html\?search=query"
+```
+
+字符串转义以后，可以使用 RegExp 构造函数生成正则模式。
+
+### s 修饰符：dotAll 模式
+
+正则表达式中，点 `.` 是一个特殊的字符，代表任意单个字符（除行终止符）。以下四个字符属于“行终止符”
+
+- U+000A 换行符 `\n` 
+- U+000D 回车符 `\r` 
+- U+2028 行分隔符（line separator）
+- U+2029 段分隔符（paragraph separator）
+
+```javascript
+/foo.bar/.test('foo\nbar') // false
+/foo[^]bar/.test('foo\nbar') // true
+```
+
+现在有一个提案，引入 `\s` 修饰符，使得 `.` 可以匹配任意单个字符。正则表达式还引入一个 `dotAll` 属性，返回一个布尔值，表示该正则表达式是否处在 `dotAll` 模式。
+
+`/s` 修饰符和多行修饰符 `/m` 不冲突，两者一起使用的情况下，`.` 匹配所有字符，而 `^` 和 `$` 匹配每一行的行首和行尾。
+
+### 后行断言
+
+JavaScript 语言的正则表达式，只支持先行断言（lookahead）和先行否定断言（negative lookahead），不支持后行断言（lookbehind）和后行否定断言（negative lookahead）。
+
+- “先行断言”指的是，`x` 只有在 `y` 前面才匹配，必须写成 `/x(?=y)/` 
+- “先行否定断言”值的是，`x` 只有不在 `y` 前面才匹配，必须写成 `/x(?!y)/` 
+
+### Unicode 属性类
+
+目前，有一个提案，引入了一种新的类的写法 `\p{…}` 和 `\P{…}` ，允许正则表达式匹配符合 Unicode 某种属性的所有字符。
+
+```javascript
+const regexGreekSymbol = /\p{Script=Greek}/u;
+regexGreekSymbol.test('π') // u
+```
+
+上面代码中，`\p{Script=Greek}` 指定匹配一个希腊文字幕，所以匹配成功。
+
+`\P{…}` 是 `\p{…}` 的反向匹配，即匹配不满足条件的字符。这两种类只对 Unicode 有效，所以使用的时候一定要加 `u` 修饰符。由于 Unicode 的各种属性非常多，所以这种新的类的表达能力非常强。
+
+```javascript
+const regex = /^\p{Decimal_Number}+$/u;
+regex.test('𝟏𝟐𝟑𝟜𝟝𝟞𝟩𝟪𝟫𝟬𝟭𝟮𝟯𝟺𝟻𝟼') // true
+```
+
+`\p{Number}` 甚至能匹配罗马数字。
+
+```javascript
+// 匹配所有数字
+const regex = /^\p{Number}+$/u;
+regex.test('²³¹¼½¾') // true
+regex.test('㉛㉜㉝') // true
+regex.test('ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ') // true
+```
+
