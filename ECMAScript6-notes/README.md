@@ -1174,3 +1174,148 @@ regex.test('㉛㉜㉝') // true
 regex.test('ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ') // true
 ```
 
+# 数值的扩展
+
+## 二进制和八进制表示法
+
+ES6 提供了二进制和八进制数值的新的写法，分别用前缀 `0b(0B)` 和 `0o(0O)` 表示。可以使用 `Number` 方法将 `0b` 和 `0o` 字符串转换为十进制。
+
+```javascript
+0b111110111 === 503 // true
+0o767 === 503 // true
+Number('0b111') // 7
+Number('0o10') // 8
+```
+
+## Number.isFinite(), Number.isNaN()
+
+ES6 在 Number 对象上，新提供了 `Number.isFinite()` 和 `Number.isNaN()` 两个方法。
+
+`Number.isFinite()` 用来检查一个数值是否为有限的。非有限的值包括 `NaN` `(-)Infinity` `'foo'` `'15'` `true` 
+
+`Number.isNaN()` 用来检查一个值是否为 `NaN` 。
+
+```javascript
+Number.isNaN(NaN) // true
+Number.isNaN(15) // false
+Number.isNaN('15') // false
+Number.isNaN(true) // false
+Number.isNaN(9/NaN) // true
+Number.isNaN('true'/0) // true
+Number.isNaN('true'/'true') // true
+```
+
+新方法只对数值有效，非数字一律返回 `false` 。
+
+## Number.parseInt(), Number.parseFloat()
+
+ES6 将全局方法 `parseInt()` 和 `parseFloat()` ，移植到 Number 对象上，行为保持不变。这样做是为了逐步减少全局性方法，使得语言逐步模块化。
+
+## Number.isInteger()
+
+用于判断一个值是否为整数。需要注意的是，在 JavaScript 内部，整数和浮点数是同样的储存方法，所以 3 和 3.0 被视为同一个值。
+
+```javascript
+Number.isInteger(25.0) // true
+```
+
+## Number.EPSILON
+
+ES6 在 Number 对象上面，新增了一个极小的常量 `Number.EPSILON` 。用于为浮点数计算设置一个误差范围，如果误差小于 `Number.EPSILON` ，我们就认为得到正确结果。
+
+```javascript
+function withinErrorMargin (left, right) {
+  return Math.abs(left - right) < Number.EPSILON;
+}
+withinErrorMargin(0.1 + 0.2, 0.3) // true
+withinErrorMargin(0.2 + 0.2, 0.3) // false
+```
+
+## 安全整数和 Number.isSafeInteger()
+
+JavaScript 能够准确表示的整数范围在 `-2^53~2^53（不含两个端点）` ，超过这个范围，无法精确表示这个值。
+
+ES6 引入了 `Number.MAX_SAFE_INTEGER` 和 `Number.MIN_SAFE_INTEGER` 两个常量，用来表示这个范围的上下限。`Number.inSafeInteger()` 则是用来判断一个整数是否落在这个范围内。
+
+实际使用时，不要只验证运算结果，而要同时验证参与运算的每一个值。
+
+## Math 对象的扩展
+
+### Math.trunc()
+
+用于去除一个数的小数部分，返回整数部分。由于负数将导致向上向下取整的不同。
+
+对于非数值，`Math.trunc` 内部使用 Number 方法将其先转为数值，对于空值或无法截取整数的值，返回 NaN。
+
+```javascript
+Math.trunc = Math.trunc || function(x) {
+  return x < 0 ? Math.ceil(x) : Math.floor(x);
+};
+```
+
+### Math.sign()
+
+用来判断一个数是正数、负数还是零。它返回五种值：
+
+- 正数，返回 +1
+- 负数，返回 -1
+- 0，返回 0
+- -0，返回 -0
+- 其他值，返回 NaN
+
+### Math.cbrt()
+
+用于计算一个数的立方根，会先使用 Number 方法将其转换为数值
+
+### Math.clz32
+
+JavaScript 的整数使用 32 位二进制形式表示，`Math.clz32` 方法返回一个数的32位无符号整数形式有多少个前导0。clz32 函数名来自“count leading zero bits in 32-bit binary representations of a number”。
+
+### Math.imul()
+
+返回两个数以 32 位带符号整数形式相乘的结果，返回一个 32 位的带符号整数。`Math.imul` 方法可以返回很大的数相乘时，正确的低位数值。
+
+### Math.fround()
+
+返回一个数的单精度浮点数形式。对整数来说，返回结果相同。对于无法用 64 个二进制位精确表示的小数，`Math.fround` 方法会返回最接近这个小数的单精度浮点数。
+
+### Math.hypot()
+
+返回所有参数的平方和的平方根。
+
+### 对数的方法
+
+#### Math.expm1()
+
+`Math.expm1(x)` 返回 e^x - 1，即 `Math.exp(x) - 1`。
+
+#### Math.log1p()
+
+`Math.log1p(x)` 方法返回 `1 + x` 的自然对数，即 `Math.log(1 + x)`。如果 `x` 小于 -1，返回 `NaN`。
+
+#### Math.log10()
+
+`Math.log10(x)` 返回以 10 为底的 `x` 的对数。如果 `x` 小于 0，则返回 NaN。
+
+#### Math.log2()
+
+`Math.log10(x)` 返回以 2 为底的 `x` 的对数。如果 `x` 小于 0，则返回 NaN。
+
+### 三角函数的方法
+
+- `Math.sinh(x)` 返回 `x` 的双曲正弦
+- `Math.cosh(x)` 返回 `x` 的双曲余弦
+- `Math.tanh(x)` 返回 `x` 的双曲正切
+- `Math.asinh(x)` 返回 `x` 的反双曲正弦
+- `Math.acosh(x)` 返回 `x` 的反双曲余弦
+- `Math.atanh(x)` 返回 `x` 的反双曲正切
+
+## 指数运算符
+
+ES2016 新增了一个指数运算符 `**` 。可以与等号结合，形成一个新的赋值运算符 `**=` 。
+
+```javascript
+let a = 2; a **= 3 // a = a * a * a
+```
+
+与 `Math.pow` 的实现不同，对于特别大的运算结果，两者会有细微的差异。
