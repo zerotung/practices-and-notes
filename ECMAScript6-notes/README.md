@@ -1319,3 +1319,193 @@ let a = 2; a **= 3 // a = a * a * a
 ```
 
 与 `Math.pow` 的实现不同，对于特别大的运算结果，两者会有细微的差异。
+
+# 数组的扩展
+
+## Array.from()
+
+用于将两类对象转为真正的数组：类似数组的对象和可遍历的对象（包括 ES6 新增的数据结构 Set 和 Map）
+
+```javascript
+let arrayLike = { '0': 'a', '1': 'b', '2': 'c', length: 3};
+let arr = Array.from(arrayLike); // ['a', 'b', 'c']
+```
+
+实际应用中，常见的类似数组的对象是 DOM 操作返回的 NodeList 集合，以及函数内部的 `arguments` 对象。`Array.from` 都可以将他们转为真正的数组。
+
+`querySelectorAll` 方法返回一个类似数组的对象，只有转换为真正的数组，才能使用 `forEach` 方法。只要是部署了 `Iterator` 接口的数据结构，`Array.from` 都能将其转为数组。
+
+扩展运算符 `…` 也可以将某些数据结构转为数组。扩展运算符背后调用的是遍历器接口（`Symbol.iteratro` ），如果一个对象未部署这个接口，就无法转换。
+
+```javascript
+function foo() { var args = [...arguments]; } // arguments对象
+[...document.querySelectorAll('div')] // NodeList对象
+```
+
+类似数组的对象，本质特征只有一点，必须有 `length` 属性。因此，任何有 `length` 属性的对象都可以通过 `Array.from` 方法转为数组，而扩展运算符就无法转换。
+
+```javascript
+Array.from({ length: 3 }); // [ undefined, undefined, undefined ]
+```
+
+`Array.from` 还可以接受第二个参数，作用类似于数组的 `map` 方法，用来对每个元素进行处理，结果放回数组。
+
+```javascript
+Array.from([1, 2, 3], (x) => x * x) // [1, 4, 9]
+function typeOf() { return Array.from(arguments, value => typeof value) }
+typeOf(null, [], NaN) // ['object', 'object', 'number']
+Array.from({ length: 2 }, () => 'jack') // ['jack', 'jack']
+```
+
+## Array.of()
+
+用于将一组值，转换为数组。主要用于弥补构造函数 `Array()` 的不足。
+
+```javascript
+Array.of(3, 11, 8) // [3, 11, 8]
+Array.of(3) // [3]
+Array(3, 11, 8) // [3, 11, 8]
+Array(3) // [, , ,]
+```
+
+`Array.of` 基本上可以用来替代 `Array()` 或 `new Array()` 。总是返回参数值组成的数组。如果没有参数，就返回一个空数组。
+
+## 数组实例的 copyWithin()
+
+在当前数组内部，将指定位置的成员复制到其他位置（会覆盖原有成员），然后返回当前数组。使用这个方法，会修改当前数组。
+
+```javascript
+Array.prototype.copyWithin(target, start = 0, end = this.length)
+```
+
+接受三个参数，都应该是数值，不是则转为数值。
+
+- target（必需）从该位置开始替换数据
+- start（可选）从该位置开始读取数据，默认为0。如果为负值，表示倒数。
+- end（可选）到该位置前停止读取数据，默认等于数组长度。如果为负值，表示倒数。
+
+```javascript
+[1, 2, 3, 4, 5].copyWithin(0, 3) // [4, 5, 3, 4, 5]
+```
+
+## 数组实例的 find() 和 findIndex()
+
+### find()
+
+找出第一个符合条件的数组成员。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为 `true` 的成员，然后返回该成员。如果没有符合的成员，则返回 `undefined` 。
+
+```javascript
+[1, 4, -5, 10].find((n) => n < 0) // -5
+```
+
+`find` 方法的回调函数可以接受三个参数，依次为当前的值、当前的位置和原数组。
+
+```javascript
+[1, 5, 10, 15].find(function(value, index, arr) {
+  return value > 9;
+}) // 10
+```
+
+### findIndex()
+
+与 `find` 类似，返回第一个符合条件的数组成员的位置，如果都不符合条件则返回 `-1` 。
+
+```javascript
+[1, 5, 10, 15].findIndex(function(value, index, arr) {
+  return value > 9;
+}) // 2
+```
+
+这两个方法都可以接受第二个参数，用来绑定回调函数的 `this` 对象。另外，这两个方法都可以发现 `NaN` 。
+
+## 数组实例的 fill()
+
+使用给定值，填充一个数组。用于空数组的初始化非常方便。还可以接受第二个和第三个参数，用于指定填充的起始位置和结束为止。
+
+```javascript
+['a', 'b', 'c'].fill(7) // [7, 7, 7]
+['a', 'b', 'c'].fill(7, 1, 2) // ['a', 7, 'c']
+```
+
+## 数组实例的 entries(), keys() 和 values()
+
+用于遍历数组。他们都返回一个遍历器对象，可以用 `for … of` 循环进行遍历，唯一区别是 `keys()` 是对键名的遍历、`values()` 是对键值的遍历，`entries()` 是对键值对的遍历。
+
+```javascript
+for (let index of ['a', 'b'].keys()) { console.log(index); } // 0  1
+for (let elem of ['a', 'b'].values()) { console.log(elem); } // 'a'  'b'
+for (let [index, elem] of ['a', 'b'].entries()) { console.log(index, elem); }
+```
+
+如果不使用 `for … of` 循环，可以手动调用遍历器对象的 `next` 方法，进行遍历。
+
+```javascript
+let letter = ['a', 'b', 'c'];
+let entries = letter.entries();
+console.log(entries.next().value); // [0, 'a']
+console.log(entries.next().value); // [1, 'b']
+```
+
+## 数组实例的 includes()
+
+`Array.prototype.includes` 方法返回一个布尔值，表示某数组是否包含给定的值，与字符串的 `includes` 方法类似。该方法属于 ES7，但 Babel 转码器已经支持。
+
+该方法的第二个参数表示搜索的起始位置，默认为 0。如果为负，则倒数。如果大于数组长度，则会重置为从 0 开始。
+
+```javascript
+[1, 2, 3].includes(2); // true
+[1, 2, NaN].includes(NaN); // true
+[1, 2, 3].includes(3, 3); // false
+[1, 2, 3].includes(3, -1); // true
+```
+
+`indexOf` 方法有两个缺点，一是不够语义化，二是内部使用严格相当运算符 `===` ，会导致 `NaN` 的误判。另外，Map 和 Set 数据结构有一个 `has` 方法，需要注意与 `includes` 区分。
+
+- Map 结构的 `has` 方法，用来查找键名
+- Set 结构的 `has` 方法，用来查找值
+
+## 数组的空位
+
+数组的空位指，数组的某一位没有任何值。比如，`Array` 构造函数返回的数组都是空位。
+
+```javascript
+Array(3) // [, , ,]
+0 in [undefined, undefined, undefined] // true
+0 in [, , ,] // false
+```
+
+注意，空位不是 `undefined`，一个位置的值等于 `undefined`，依然是有值的。空位是没有任何值的。ES5 对空位的处理很不一致，大多数情况会忽略空位。
+
+- `forEach()`，`filter()`，`every()` 和 `some()` 都会跳过空位
+- `map()` 会跳过空位，但会保留这个值
+- `join()` 和 `toString()` 会将空位视为 `undefined`，而 `undefined` 和 `null` 会被处理成空字符串
+
+ES6这是明确将空位转为 `undefined`。
+
+- `Array.from`，`entries()`，`keys()`，`values()`，`find()`，`findIndex()` 和 `…` 会将空位转为 `undefined`
+- `copyWithin()` 会连空位一起拷贝
+- `fill()` 会将空位视为正常的数组位置
+- `for .. of` 循环也会遍历空位
+
+由于空位的处理规则非常不统一，所以建议避免出现空位。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
