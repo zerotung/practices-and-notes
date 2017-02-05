@@ -1489,23 +1489,234 @@ ES6这是明确将空位转为 `undefined`。
 
 由于空位的处理规则非常不统一，所以建议避免出现空位。
 
+# 函数的扩展
 
+## 函数参数的默认值
 
+### 基本用法
 
+ES6 允许为函数参数设置默认值，即直接写在参数定义的后面。避免传入参数布尔值为 `false` 时，引起的 ES5 的基本替代方式失效。
 
+```javascript
+function log(x, y = 'World') { console.log(x, y); }
+log('Hello') // Hello World
+log('Hello', 'China') // Hello China
+log('Hello', '') // Hello  
+```
 
+参数变量是默认声明的，所以不能用 `let` 或 `const` 再次声明。
 
+```javascript
+function foo(x = 5) { let x = 1; const x = 2; } // error
+```
 
+如果参数默认值是变量，那么参数就不是传值的，而是每次都重新计算默认表达式的值。也就是说，参数默认值是惰性求值的。
 
+```javascript
+let x = 99;
+function foo(p = x + 1) { console.log(p); }
+foo() // 100
+x = 100;
+foo() // 101
+```
 
+### 与解构赋值默认值结合使用
 
+```javascript
+function foo({x, y = 5}) { console.log(x, y); }
+foo({}) // undefined, 5
+foo({x: 1}) // 1, 5
+foo({x: 1, y: 2}) // 1, 2
+foo() // TypeError: Cannot read property 'x' of undefined
+```
 
+```javascript
+// 写法一
+function m1({x = 0, y = 0} = {}) { return [x, y]; }
+// 写法二
+function m2({x, y} = {x: 0, y: 0}) { return [x, y]; }
+```
 
+上面两种写法都对函数的参数设定了默认值，区别是写法一函数参数的默认值是空对象，但是设置了对象解构赋值的默认值；写法二函数参数的默认值是一个有具体属性的对象，但是没有设置对象解构赋值的默认值。
 
+### 参数默认值的位置
 
+通常情况下，定义了默认值的参数，应该是函数的尾参数。如不是尾参数，则必须显示的输入 `undefined` （`null` 无效）。
 
+### 函数的 length 属性
 
+指定了默认值以后，函数的 `length` 属性，将返回没有指定默认值的参数个数。也就是说，指定了默认值后，`length` 属性将失真。同理，rest参数也不会计入 `length` 属性。
 
+### 作用域
 
+一旦设置了参数的默认值，函数进行声明初始化时，参数会形成单独的作用域 `context`。等到初始化结束，这个作用域就会消失。这种语法行为，在不设置参数默认值时，是不会出现的。
 
+### 应用
 
+利用参数默认值，可以指定某一个参数不得省略，如果省略就抛出一个错误。
+
+```javascript
+function throwIfMissing() {
+  throw new Error('Missing parameter');
+}
+function foo(mustBeProvided = throwIfMissing()) {
+  return mustBeProvided;
+}
+foo()  // Error: Missing parameter
+```
+
+## rest 参数
+
+ES6 引入 rest 参数（形式为“…变量名”），用于获取函数的多余参数，这样就不需要使用 `arguments` 对象了。rest 参数搭配的变量是一个数组，该变量将多余的参数放入数组中。
+
+```javascript
+function add(...values) {
+  let sum = 0;
+  for (var val of values) { sum += val; }
+  return sum;
+}
+add(2, 5, 3) // 10
+```
+
+rest 参数中的变量代表一个数组，所以数组特有的方法都可以用于这个变量。下面是一个利用 rest 参数改写数组 push 方法的例子。
+
+```javascript
+function push(array, ...items) {
+  items.forEach(function(item) {
+    array.push(item);
+    console.log(item);
+  });
+}
+var a = [];
+push(a, 1, 2, 3)  // [1, 2, 3]
+```
+
+`length` 属性，不包括 `rest` 参数。
+
+## 扩展运算符
+
+### 含义
+
+扩展运算符（spread）是三个点（`…`）。它好比 rest 参数的逆运算，将一个数组转为用逗号分隔的参数列表。
+
+```javascript
+console.log(...[1, 2, 3]) // 1 2 3
+console.log(1, ...[2, 3, 4], 5) // 1 2 3 4 5
+```
+
+该运算符主要用于函数调用。
+
+```javascript
+function push(array, ...items) {
+  array.push(...items);
+}
+function add(x, y) { return x + y; }
+add(...[4, 38]) // 42
+```
+
+### 替代数组的 apply 方法
+
+由于扩展运算符可以展开数组，所以不再需要 `apply` 方法，将数组转为函数的参数了。
+
+```javascript
+function f(x, y, z) { ... }
+var args = [0, 1, 2];
+// ES5的写法
+f.apply(null, args);
+// ES6的写法
+f(...args);
+Math.max(...[14, 3, 77]);
+arr.push(...[0, 3, 4]);
+new Date(...[2015, 1, 1]);
+```
+
+### 扩展运算符的应用
+
+#### 合并数组
+
+```javascript
+// ES5
+[1, 2].concat(more)
+// ES6
+[1, 2, ...more]
+```
+
+#### 与解构赋值结合
+
+```javascript
+// ES5
+a = list[0], rest = list.slice(1)
+// ES6
+[a, ...rest] = list
+// others
+const [first, ...rest] = [1, 2, 3, 4, 5];
+const [first, ...rest] = []; // undefined []
+const [first, ...rest] = ["foo"] // "foo" []
+```
+
+扩展运算符只能放在参数的最后一位。
+
+#### 函数的返回值
+
+JavaScript 的函数，如果需要返回多个值，只能返回数组或对象。扩展运算符提供了一种通便方法。
+
+```javascript
+var dateFields = readDateFields(database);
+var d = new Date(...dateFields);
+```
+
+上面代码从数据库取出一行数据，通过扩展运算符，直接将其传入构造函数 `Date` 。
+
+#### 字符串
+
+扩展运算符还可以将字符串转为真正的数组。
+
+```javascript
+[...'hello'] // ["h", "e", "l", "l", "o"]
+'x\uD83D\uDE80y'.length // 4
+[...'x\uD83D\uDE80y'].length // 3
+```
+
+凡是涉及到操作 32 位 Unicode 字符的函数，最好都用扩展运算符改写。
+
+#### 实现了 Iterator 接口的对象
+
+任何 Iterator 接口的对象，都可以用扩展运算符转为真正的数组。
+
+```javascript
+var nodeList = document.querySelectorAll('div');
+var array = [...nodeList];
+```
+
+#### Map 和 Set 结构，Generator 函数
+
+扩展运算符内部调用的是数据结构的 Iterator 接口，因此只要具有Iterator接口的对象，都可以使用扩展运算符，比如Map结构。
+
+```javascript
+let map = new Map([
+  [1, 'one'],
+  [2, 'two'],
+  [3, 'three'],
+]);
+let arr = [...map.keys()]; // [1, 2, 3]
+```
+
+Generator函数运行后，返回一个遍历器对象，因此也可以使用扩展运算符。
+
+```javascript
+var go = function*(){
+  yield 1;
+  yield 2;
+  yield 3;
+};
+[...go()] // [1, 2, 3]
+```
+
+上面代码中，变量 `go` 是一个 Generator 函数，执行后返回的是一个遍历器对象，对这个遍历器对象执行扩展运算符，就会将内部遍历得到的值，转为一个数组。
+
+如果对没有 `iterator` 接口的对象，使用扩展运算符，将会报错。
+
+```javascript
+var obj = {a: 1, b: 2};
+let arr = [...obj]; // TypeError: Cannot spread non-iterable object
+```
